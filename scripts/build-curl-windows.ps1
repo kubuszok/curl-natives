@@ -25,7 +25,8 @@ $CommonFlags = @(
     "-DBUILD_TESTING=OFF",
     "-DCURL_USE_SCHANNEL=ON",
     "-DCURL_DISABLE_LDAP=ON",
-    "-DCURL_DISABLE_LDAPS=ON"
+    "-DCURL_DISABLE_LDAPS=ON",
+    "-DCURL_USE_LIBPSL=OFF"
 )
 
 # Build static library

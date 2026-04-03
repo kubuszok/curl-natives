@@ -14,9 +14,10 @@ $ErrorActionPreference = "Stop"
 $SrcDir = Resolve-Path $SrcDir
 $InstallStatic = Join-Path $SrcDir "install-${Target}-static"
 $InstallShared = Join-Path $SrcDir "install-${Target}-shared"
-$Staging = Join-Path $OutputDir "staging-$Target"
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
+$OutputDir = Resolve-Path $OutputDir
+$Staging = Join-Path $OutputDir "staging-$Target"
 if (Test-Path $Staging) { Remove-Item -Recurse -Force $Staging }
 New-Item -ItemType Directory -Force -Path "$Staging/lib" | Out-Null
 New-Item -ItemType Directory -Force -Path "$Staging/include" | Out-Null

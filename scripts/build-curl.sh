@@ -40,18 +40,24 @@ case "$TARGET" in
             -DCURL_USE_OPENSSL=ON
         )
         ;;
-    macos-x86_64)
+    macos-x86_64|macos-aarch64)
+        local arch="arm64"
+        if [[ "$TARGET" == "macos-x86_64" ]]; then
+            arch="x86_64"
+        fi
         TARGET_FLAGS+=(
             -DCURL_USE_SECTRANSP=ON
-            -DCMAKE_OSX_ARCHITECTURES=x86_64
+            -DCMAKE_OSX_ARCHITECTURES="$arch"
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-        )
-        ;;
-    macos-aarch64)
-        TARGET_FLAGS+=(
-            -DCURL_USE_SECTRANSP=ON
-            -DCMAKE_OSX_ARCHITECTURES=arm64
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+            # Disable auto-discovery of homebrew libs — they are only
+            # available for the host architecture, breaking cross-compile.
+            -DCURL_USE_OPENSSL=OFF
+            -DUSE_NGHTTP2=OFF
+            -DCURL_BROTLI=OFF
+            -DCURL_ZSTD=OFF
+            -DCURL_USE_LIBSSH2=OFF
+            -DCURL_USE_LIBSSH=OFF
+            -DCMAKE_FIND_FRAMEWORK=LAST
         )
         ;;
     *)

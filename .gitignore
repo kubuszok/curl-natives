@@ -1,0 +1,19 @@
+# Build artifacts
+build/
+build-*/
+install-*/
+artifacts/
+
+# curl source
+curl-*.tar.gz
+curl-[0-9]*/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

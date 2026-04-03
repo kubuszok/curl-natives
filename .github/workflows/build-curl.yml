@@ -1,0 +1,194 @@
+name: Build libcurl
+
+on:
+  workflow_dispatch:
+    inputs:
+      curl_version:
+        description: 'curl version to build (e.g., 8.19.0)'
+        required: true
+        default: '8.19.0'
+  push:
+    tags:
+      - 'curl-*'
+
+jobs:
+  # Determine the curl version from tag or input
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      curl_version: ${{ steps.version.outputs.curl_version }}
+    steps:
+      - name: Determine curl version
+        id: version
+        run: |
+          if [[ -n "${{ inputs.curl_version }}" ]]; then
+            echo "curl_version=${{ inputs.curl_version }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref_name }}" == curl-* ]]; then
+            VERSION="${{ github.ref_name }}"
+            echo "curl_version=${VERSION#curl-}" >> "$GITHUB_OUTPUT"
+          else
+            echo "curl_version=8.19.0" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Print version
+        run: echo "Building curl ${{ steps.version.outputs.curl_version }}"
+
+  build-linux-x86_64:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    env:
+      CURL_VERSION: ${{ needs.prepare.outputs.curl_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build libssl-dev zlib1g-dev
+
+      - name: Download curl source
+        run: |
+          curl -fsSL "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" -o curl-src.tar.gz
+          tar xzf curl-src.tar.gz
+
+      - name: Build
+        run: bash scripts/build-curl.sh --target linux-x86_64 --src-dir "curl-${CURL_VERSION}"
+
+      - name: Collect artifacts
+        run: bash scripts/collect-artifacts.sh --target linux-x86_64 --src-dir "curl-${CURL_VERSION}" --output-dir artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: curl-linux-x86_64
+          path: artifacts/curl-linux-x86_64.tar.gz
+
+  build-linux-aarch64:
+    needs: prepare
+    runs-on: ubuntu-24.04-arm
+    env:
+      CURL_VERSION: ${{ needs.prepare.outputs.curl_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build libssl-dev zlib1g-dev
+
+      - name: Download curl source
+        run: |
+          curl -fsSL "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" -o curl-src.tar.gz
+          tar xzf curl-src.tar.gz
+
+      - name: Build
+        run: bash scripts/build-curl.sh --target linux-aarch64 --src-dir "curl-${CURL_VERSION}"
+
+      - name: Collect artifacts
+        run: bash scripts/collect-artifacts.sh --target linux-aarch64 --src-dir "curl-${CURL_VERSION}" --output-dir artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: curl-linux-aarch64
+          path: artifacts/curl-linux-aarch64.tar.gz
+
+  build-macos:
+    needs: prepare
+    runs-on: macos-14
+    env:
+      CURL_VERSION: ${{ needs.prepare.outputs.curl_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install cmake ninja
+
+      - name: Download curl source
+        run: |
+          curl -fsSL "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" -o curl-src.tar.gz
+          tar xzf curl-src.tar.gz
+
+      - name: Build macos-aarch64 (native)
+        run: bash scripts/build-curl.sh --target macos-aarch64 --src-dir "curl-${CURL_VERSION}"
+
+      - name: Build macos-x86_64 (cross-compile)
+        run: bash scripts/build-curl.sh --target macos-x86_64 --src-dir "curl-${CURL_VERSION}"
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          bash scripts/collect-artifacts.sh --target macos-aarch64 --src-dir "curl-${CURL_VERSION}" --output-dir artifacts
+          bash scripts/collect-artifacts.sh --target macos-x86_64 --src-dir "curl-${CURL_VERSION}" --output-dir artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: curl-macos
+          path: artifacts/curl-macos-*.tar.gz
+
+  build-windows:
+    needs: prepare
+    runs-on: windows-2022
+    env:
+      CURL_VERSION: ${{ needs.prepare.outputs.curl_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download curl source
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://curl.se/download/curl-$env:CURL_VERSION.tar.gz" -OutFile curl-src.tar.gz
+          tar xzf curl-src.tar.gz
+
+      - name: Build windows-x86_64 (native)
+        shell: pwsh
+        run: .\scripts\build-curl-windows.ps1 -Target windows-x86_64 -SrcDir "curl-$env:CURL_VERSION"
+
+      - name: Build windows-aarch64 (cross-compile)
+        shell: pwsh
+        run: .\scripts\build-curl-windows.ps1 -Target windows-aarch64 -SrcDir "curl-$env:CURL_VERSION"
+
+      - name: Collect artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          .\scripts\collect-artifacts-windows.ps1 -Target windows-x86_64 -SrcDir "curl-$env:CURL_VERSION" -OutputDir artifacts
+          .\scripts\collect-artifacts-windows.ps1 -Target windows-aarch64 -SrcDir "curl-$env:CURL_VERSION" -OutputDir artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: curl-windows
+          path: artifacts/curl-windows-*.tar.gz
+
+  release:
+    needs: [build-linux-x86_64, build-linux-aarch64, build-macos, build-windows, prepare]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lhR release-artifacts/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/curl-*.tar.gz
+          body: |
+            libcurl ${{ needs.prepare.outputs.curl_version }} native libraries for Scala Native.
+
+            ## Platforms
+
+            | Artifact | Architecture | TLS Backend | Libraries |
+            |----------|-------------|-------------|-----------|
+            | `curl-linux-x86_64.tar.gz` | x86_64 | OpenSSL | .a, .so |
+            | `curl-linux-aarch64.tar.gz` | aarch64 | OpenSSL | .a, .so |
+            | `curl-macos-x86_64.tar.gz` | x86_64 | SecureTransport | .a, .dylib |
+            | `curl-macos-aarch64.tar.gz` | aarch64 | SecureTransport | .a, .dylib |
+            | `curl-windows-x86_64.tar.gz` | x86_64 | Schannel (MSVC) | .lib, .dll |
+            | `curl-windows-aarch64.tar.gz` | aarch64 | Schannel (MSVC) | .lib, .dll |
+
+            ## Artifact contents
+
+            Each archive contains:
+            - `lib/` — static and shared libraries
+            - `include/curl/` — C headers

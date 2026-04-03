@@ -41,7 +41,7 @@ case "$TARGET" in
         )
         ;;
     macos-x86_64|macos-aarch64)
-        local arch="arm64"
+        arch="arm64"
         if [[ "$TARGET" == "macos-x86_64" ]]; then
             arch="x86_64"
         fi

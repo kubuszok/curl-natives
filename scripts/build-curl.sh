@@ -45,19 +45,22 @@ case "$TARGET" in
         if [[ "$TARGET" == "macos-x86_64" ]]; then
             arch="x86_64"
         fi
+        # Prevent CMake from finding homebrew arm64 libs during cross-compile.
+        # Clear pkg-config so CMake cannot discover homebrew packages.
+        export PKG_CONFIG_PATH=""
+        export PKG_CONFIG_LIBDIR=""
         TARGET_FLAGS+=(
             -DCURL_USE_SECTRANSP=ON
             -DCMAKE_OSX_ARCHITECTURES="$arch"
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-            # Disable auto-discovery of homebrew libs — they are only
-            # available for the host architecture, breaking cross-compile.
             -DCURL_USE_OPENSSL=OFF
             -DUSE_NGHTTP2=OFF
             -DCURL_BROTLI=OFF
             -DCURL_ZSTD=OFF
             -DCURL_USE_LIBSSH2=OFF
             -DCURL_USE_LIBSSH=OFF
-            -DCMAKE_FIND_FRAMEWORK=LAST
+            -DCURL_USE_LIBIDN2=OFF
+            -DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew
         )
         ;;
     *)

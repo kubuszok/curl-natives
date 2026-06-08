@@ -54,7 +54,7 @@ jobs:
       - name: Collect artifacts
         run: bash scripts/collect-artifacts.sh --target linux-x86_64 --src-dir "curl-${CURL_VERSION}" --output-dir artifacts
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: curl-linux-x86_64
           path: artifacts/curl-linux-x86_64.tar.gz
@@ -81,7 +81,7 @@ jobs:
       - name: Collect artifacts
         run: bash scripts/collect-artifacts.sh --target linux-aarch64 --src-dir "curl-${CURL_VERSION}" --output-dir artifacts
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: curl-linux-aarch64
           path: artifacts/curl-linux-aarch64.tar.gz
@@ -114,7 +114,7 @@ jobs:
           bash scripts/collect-artifacts.sh --target macos-aarch64 --src-dir "curl-${CURL_VERSION}" --output-dir artifacts
           bash scripts/collect-artifacts.sh --target macos-x86_64 --src-dir "curl-${CURL_VERSION}" --output-dir artifacts
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: curl-macos
           path: artifacts/curl-macos-*.tar.gz
@@ -148,7 +148,7 @@ jobs:
           .\scripts\collect-artifacts-windows.ps1 -Target windows-x86_64 -SrcDir "curl-$env:CURL_VERSION" -OutputDir artifacts
           .\scripts\collect-artifacts-windows.ps1 -Target windows-aarch64 -SrcDir "curl-$env:CURL_VERSION" -OutputDir artifacts
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: curl-windows
           path: artifacts/curl-windows-*.tar.gz
